@@ -1,5 +1,5 @@
 // Made by: Santeri Kottari
-// Based on works made by: https://github.com/anttijuu
+// Based on works made by: Antti Juustila https://github.com/anttijuu
 
 package com.santeri.chatserver;
 
@@ -41,12 +41,12 @@ public class ChatHandler implements HttpHandler {
                 }
                 else {
                     InputStream is = exchange.getRequestBody();
-                    // read text from request body and add them to messages-arraylist (encoded in UTF-8)
+                    // read text from request body
                     String messageText = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8)).lines()
                             .collect(Collectors.joining("\n"));
-
                     // confirm the read request body is not empty
                     if(messageText != null && !messageText.trim().isEmpty()) {
+                        // add text from request body to messages-arraylist
                         messages.add(messageText);
                         is.close();
                         // send back response code but no response body (-1)

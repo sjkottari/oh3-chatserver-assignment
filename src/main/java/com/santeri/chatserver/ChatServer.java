@@ -1,5 +1,5 @@
 // Made by: Santeri Kottari
-// Based on works made by: https://github.com/anttijuu
+// Based on works made by: Antti Juustila https://github.com/anttijuu
 
 package com.santeri.chatserver;
 
