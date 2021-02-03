@@ -8,34 +8,37 @@ import java.util.Map;
 import com.sun.net.httpserver.BasicAuthenticator;
 
 public class ChatAuthenticator extends BasicAuthenticator {
-
+    // users-map initialized 
     private Map<String, String> users = null;
-
+    // constructor for ChatAuthenticator, receives realm '/chat' or '/registration'
     public ChatAuthenticator(String realm) {
         super(realm);
+        // new HashTable initialized into 'users'
         users = new Hashtable<String, String>();
-        users.put("user", "password");
+        users.put("admin", "password"); 
     }
 
     @Override
     public boolean checkCredentials(String username, String password) {
-
+        int code = 200;
+        // checking if users hashtable contains username and password inserted in the request
         if (users.containsKey(username) && users.containsValue(password)) {
-            return true;
-        } else {
-            return false;
+            // check if key-value pair matches
+            if (users.get(username).equals(password)) {
+                return true;
+            }
         }
-
+        // non-authenticated credentials result into error
+        code = 401;
+        ChatServer.log("Authentication error: " + code + " Invalid credentials");
+        return false;
     }
 
+    // method for adding user, returns true if successful
     public boolean addUser(String username, String password) {
-
-        /*
-        Map<String, String> newUsers = null;
-        newUsers = new Hashtable<String, String>();
-        newUsers.put(username, password); */
-
+        // check if users hashtable does not contain the username beforehand
         if (!users.containsKey(username)) {
+            // new key-value pair added to users
             users.put(username, password);
             return true;
         }

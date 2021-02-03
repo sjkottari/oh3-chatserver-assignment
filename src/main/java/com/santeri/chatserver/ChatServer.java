@@ -7,6 +7,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.net.InetSocketAddress;
 import java.security.KeyStore;
+import java.time.LocalDateTime;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
@@ -17,17 +18,15 @@ import com.sun.net.httpserver.HttpContext;
 import com.sun.net.httpserver.HttpsConfigurator;
 import com.sun.net.httpserver.HttpsParameters;
 import com.sun.net.httpserver.HttpsServer;
-import com.sun.net.httpserver.HttpHandler;
 
-//@SuppressWarnings("restriction")
 public class ChatServer {
     public static void main(String[] args) throws Exception {
-
         try {
+            log("Launching ChatServer");
             // create a new Http server instance to socket address (port) 8001
             HttpsServer server = HttpsServer.create(new InetSocketAddress(8001), 0);
-
             SSLContext sslContext = chatServerSSLContext();
+
             server.setHttpsConfigurator(new HttpsConfigurator(sslContext) {
                 public void configure(HttpsParameters params) {
                     InetSocketAddress remote = params.getClientAddress();
@@ -36,19 +35,21 @@ public class ChatServer {
                     params.setSSLParameters(sslparams);
                 }
             });
-            //HttpHandler handler = new HttpHandler("/registration");
 
             ChatAuthenticator auth = new ChatAuthenticator("/chat");
             // create new Http context "/chat" and specify a handler for incoming requests
             HttpContext httpcontext = server.createContext("/chat", new ChatHandler());
+            // set authenticator for httpcontext
             httpcontext.setAuthenticator(auth);
-
+            // create new context for registration with reference to authenticator
             server.createContext("/registration", new RegistrationHandler(auth));
+
             server.setExecutor(null);
             server.start();
+            log("ChatServer running...");
 
         } catch (FileNotFoundException e) {
-            // failed in finding certificate file
+            // failed at finding certificate file
             System.out.println("Certificate not found");
             e.printStackTrace();
         } catch (Exception e) {
@@ -60,6 +61,7 @@ public class ChatServer {
 
     private static SSLContext chatServerSSLContext() throws Exception {
 
+        // SSL passphrase
         char[] passphrase = "kuukupoopotin".toCharArray();
         KeyStore ks = KeyStore.getInstance("JKS");
         ks.load(new FileInputStream("keystore.jks"), passphrase);
@@ -74,6 +76,21 @@ public class ChatServer {
         ssl.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
 
         return ssl;
+    }
+
+    public static final String ANSI_RESET = "\u001B[0m";
+    public static final String ANSI_BLACK = "\u001B[30m";
+    public static final String ANSI_RED = "\u001B[31m";
+    public static final String ANSI_GREEN = "\u001B[32m";
+    public static final String ANSI_YELLOW = "\u001B[33m";
+    public static final String ANSI_BLUE = "\u001B[34m";
+    public static final String ANSI_PURPLE = "\u001B[35m";
+    public static final String ANSI_CYAN = "\u001B[36m";
+    public static final String ANSI_WHITE = "\u001B[37m";
+
+    // method for printing server terminal logs
+    public static void log(String message) {
+        System.out.println(ANSI_GREEN + LocalDateTime.now() + ANSI_RESET + " " + message);
     }
 
 }
