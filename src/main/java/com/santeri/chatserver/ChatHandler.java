@@ -82,7 +82,7 @@ public class ChatHandler implements HttpHandler {
                 errorMessage = "ERROR: Feature not supported. Only POST or GET!";
             }
 
-        } 
+        }
         // if handling the HTTP request fails, we end up in a server side error
         catch (Exception e) {
             code = 500;

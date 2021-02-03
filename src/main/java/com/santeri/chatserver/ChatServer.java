@@ -17,6 +17,7 @@ import com.sun.net.httpserver.HttpContext;
 import com.sun.net.httpserver.HttpsConfigurator;
 import com.sun.net.httpserver.HttpsParameters;
 import com.sun.net.httpserver.HttpsServer;
+import com.sun.net.httpserver.HttpHandler;
 
 //@SuppressWarnings("restriction")
 public class ChatServer {
@@ -35,12 +36,14 @@ public class ChatServer {
                     params.setSSLParameters(sslparams);
                 }
             });
+            //HttpHandler handler = new HttpHandler("/registration");
 
             ChatAuthenticator auth = new ChatAuthenticator("/chat");
             // create new Http context "/chat" and specify a handler for incoming requests
             HttpContext httpcontext = server.createContext("/chat", new ChatHandler());
             httpcontext.setAuthenticator(auth);
-            // executing HTTP server
+
+            server.createContext("/registration", new RegistrationHandler(auth));
             server.setExecutor(null);
             server.start();
 
