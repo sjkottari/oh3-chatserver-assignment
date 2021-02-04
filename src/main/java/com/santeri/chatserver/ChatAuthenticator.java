@@ -9,13 +9,13 @@ import com.sun.net.httpserver.BasicAuthenticator;
 
 public class ChatAuthenticator extends BasicAuthenticator {
     // users-map initialized 
-    private Map<String, String> users = null;
+    private Map<String, User> users = null;
     // constructor for ChatAuthenticator, receives realm '/chat' or '/registration'
     public ChatAuthenticator(String realm) {
         super(realm);
         // new HashTable initialized into 'users'
-        users = new Hashtable<String, String>();
-        users.put("admin", "password"); 
+        users = new Hashtable<String, User>();
+        //users.put("admin", "password"); turha?
     }
 
     @Override
@@ -35,11 +35,11 @@ public class ChatAuthenticator extends BasicAuthenticator {
     }
 
     // method for adding user, returns true if successful
-    public boolean addUser(String username, String password) {
+    public boolean addUser(String username, User newUser) {
         // check if users hashtable does not contain the username beforehand
         if (!users.containsKey(username)) {
             // new key-value pair added to users
-            users.put(username, password);
+            users.put(username, newUser);
             return true;
         }
         return false;

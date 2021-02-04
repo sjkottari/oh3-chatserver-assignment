@@ -16,6 +16,9 @@ import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 public class RegistrationHandler implements HttpHandler {
 
     ChatAuthenticator authenticator = null;
@@ -50,9 +53,9 @@ public class RegistrationHandler implements HttpHandler {
                 }
 
                 // check if headers do not contain type 'text/plain'
-                if (!contentType.contains("text/plain")) {
+                if (!contentType.contains("application/json")) {
                     code = 411;
-                    errorMessage = "Content type not supported. Only 'text/plain'";
+                    errorMessage = "Content type not supported. Only 'application/json'";
                     ChatServer.log(errorMessage);
                 } else {
                     InputStream is = exchange.getRequestBody();
@@ -62,6 +65,23 @@ public class RegistrationHandler implements HttpHandler {
                     ChatServer.log(registrationText);
                     is.close();
 
+                    JSONObject regisJson = new JSONObject(registrationText);
+
+                    String username = regisJson.getString("username");
+                    String password = regisJson.getString("password");
+                    String email = regisJson.getString("email");
+
+                    User newUser = new User(username, password, email);
+
+                    if (authenticator.addUser(username, newUser)) {
+                        exchange.sendResponseHeaders(code, -1);
+                        ChatServer.log("Added as user");
+                    } else {
+                        code = 400;
+                        errorMessage = "Invalid user credentials";
+                    }
+
+                    /*
                     // confirm the read request body is not empty
                     if (registrationText != null && !registrationText.trim().isEmpty()) {
                         // credentials are split by ':' into 2
@@ -94,7 +114,7 @@ public class RegistrationHandler implements HttpHandler {
                         code = 400;
                         errorMessage = "HTTP POST request was empty";
                         ChatServer.log(errorMessage);
-                    }
+                    } */
                 }
             }
             // if request isn't POST, we end up in a client side error
@@ -107,6 +127,9 @@ public class RegistrationHandler implements HttpHandler {
         catch (IOException e) {
             code = 500;
             errorMessage = "Error while handling the request";
+        } catch (JSONException e) {
+            code = 500;
+            errorMessage = "Error while handling JSON from request";
         } catch (Exception e) {
             code = 500;
             errorMessage = "ERROR: Internal server error";
