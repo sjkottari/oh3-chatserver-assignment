@@ -6,17 +6,28 @@ package com.santeri.chatserver;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.stream.Collectors;
 
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 public class ChatHandler implements HttpHandler {
     private String responseBody = "";
     // empty arraylist for storing chat messages
-    private ArrayList<String> messages = new ArrayList<String>();
+    private ArrayList<ChatMessage> messages = new ArrayList<ChatMessage>();
 
     // handle-method for checking client's request, preparing server's
     // response and writing response back to client
@@ -40,9 +51,10 @@ public class ChatHandler implements HttpHandler {
         } catch (IOException e) {
             code = 500;
             responseBody = "Error while handling the request" + e.getMessage();
-        }
-        // if handling the HTTP request fails, we end up in a server side error
-        catch (Exception e) {
+        } catch (JSONException e) {
+            code = 500;
+            responseBody = "Error while handling JSON in POST/GET" + e.getMessage();
+        } catch (Exception e) {
             code = 500;
             responseBody = "Internal server error" + e.getMessage();
         }
@@ -84,9 +96,9 @@ public class ChatHandler implements HttpHandler {
         }
 
         // check if headers do not contain type 'text/plain'. Not a desired option.
-        if (!contentType.contains("text/plain")) {
+        if (!contentType.contains("application/json")) {
             code = 411;
-            responseBody = "Content type not supported. Only 'text/plain'";
+            responseBody = "Content type not supported. Only 'application/json'";
             ChatServer.log(responseBody);
         } else {
             InputStream is = exchange.getRequestBody();
@@ -98,9 +110,24 @@ public class ChatHandler implements HttpHandler {
 
             // confirm the read request body is not empty
             if (messageText != null && !messageText.trim().isEmpty()) {
-                // add text from request body to messages-arraylist
-                messages.add(messageText);
-                // send back response code but no response body (-1)
+                JSONObject chatJson = new JSONObject(messageText);
+
+                String nickname = chatJson.getString("user");
+                String message = chatJson.getString("message");
+                LocalDateTime timeSent = null;
+
+                ChatMessage newMessage = new ChatMessage(timeSent, nickname, message);
+
+                String dateStr = chatJson.getString("sent");
+                OffsetDateTime odt = OffsetDateTime.parse(dateStr);
+                newMessage.timeSent = odt.toLocalDateTime();
+
+                messages.add(newMessage);
+                Collections.sort(messages, new Comparator<ChatMessage>() {
+                    @Override
+                    public int compare(ChatMessage lhs, ChatMessage rhs) {
+                        return lhs.timeSent.compareTo(rhs.timeSent);}
+                });
                 exchange.sendResponseHeaders(code, -1);
                 ChatServer.log("New message saved");
             } else {
@@ -115,29 +142,37 @@ public class ChatHandler implements HttpHandler {
     // Method for handling get requests
     private int handleGetRequest(HttpExchange exchange) throws IOException, SQLException {
         int code = 200;
-        
+
         if (messages.isEmpty()) {
             ChatServer.log("No messages to deliver");
             code = 204;
             exchange.sendResponseHeaders(code, -1);
             return code;
+        } else {
+            JSONArray responseMessages = new JSONArray();
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX");
+
+            for (ChatMessage message : messages){
+                JSONObject jsonMessage = new JSONObject();
+                jsonMessage.put("user", message.getNickname());
+                jsonMessage.put("message", message.getMessage());
+
+                LocalDateTime date = message.timeSent;
+                ZonedDateTime toSend = ZonedDateTime.of(date, ZoneId.of("UTC"));
+                String dateText = toSend.format(formatter);
+                jsonMessage.put("sent", dateText);
+
+                responseMessages.put(jsonMessage);
+            }
+
+            // informing the client of the amount of messages sent back
+            ChatServer.log("Delivering " + messages.size() + " messages to client");
+            byte[] bytes = responseMessages.toString().getBytes("UTF-8");
+            exchange.sendResponseHeaders(code, bytes.length);
+            OutputStream stream = exchange.getResponseBody();
+            stream.write(bytes);
+            stream.close();
         }
-        // going through arraylist messages, adding them to messageBody
-        String messageBody = "";
-        for (String message : messages) {
-            messageBody += message + "\n";
-        }
-        // informing the client of the amount of messages sent back
-        ChatServer.log("Delivering " + messages.size() + " messages to client");
-        // message encoded in UTF-8 into bytes array
-        byte[] bytes = messageBody.toString().getBytes("UTF-8");
-        // response code and length of body is sent back (headers)
-        exchange.sendResponseHeaders(code, bytes.length);
-        // response string body must be written to the stream
-        OutputStream stream = exchange.getResponseBody();
-        stream.write(bytes);
-        stream.close();
         return code;
     }
-
 }

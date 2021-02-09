@@ -9,7 +9,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.stream.Collectors;
 
 import com.sun.net.httpserver.Headers;
@@ -25,7 +24,6 @@ public class RegistrationHandler implements HttpHandler {
     RegistrationHandler(ChatAuthenticator auth) {
         authenticator = auth;
     }
-    private ArrayList<String> regisMessages = new ArrayList<String>();
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {
@@ -65,56 +63,27 @@ public class RegistrationHandler implements HttpHandler {
                     ChatServer.log(registrationText);
                     is.close();
 
-                    JSONObject regisJson = new JSONObject(registrationText);
-
-                    String username = regisJson.getString("username");
-                    String password = regisJson.getString("password");
-                    String email = regisJson.getString("email");
-
-                    User newUser = new User(username, password, email);
-
-                    if (authenticator.addUser(username, newUser)) {
-                        exchange.sendResponseHeaders(code, -1);
-                        ChatServer.log("Added as user");
-                    } else {
-                        code = 400;
-                        errorMessage = "Invalid user credentials";
-                    }
-
-                    /*
-                    // confirm the read request body is not empty
                     if (registrationText != null && !registrationText.trim().isEmpty()) {
-                        // credentials are split by ':' into 2
-                        String[] items = registrationText.split(":", 2);
-                        // check if there are exactly 2 items in string-array
-                        if (items.length == 2) {
-                            // check if credentials in items[] are more than 0 in length
-                            if (items[0].trim().length() > 0 && items[1].trim().length() > 0) {
-                                // if method addUser returns true, credentials are successfully registered
-                                if (authenticator.addUser(items[0], items[1])) {
-                                    // send back response code but no response body (-1)
-                                    exchange.sendResponseHeaders(code, -1);
-                                    ChatServer.log("Added as user");
-                                } else {
-                                    code = 400;
-                                    errorMessage = "Invalid user credentials";
-                                }
-                            } else {
-                                code = 400;
-                                errorMessage = "Invalid user credentials";
-                            }
+                        JSONObject regisJson = new JSONObject(registrationText);
+
+                        String username = regisJson.getString("username");
+                        String password = regisJson.getString("password");
+                        String email = regisJson.getString("email");
+
+                        User newUser = new User(username, password, email);
+
+                        if (authenticator.addUser(username, newUser)) {
+                            exchange.sendResponseHeaders(code, -1);
+                            ChatServer.log("Added as user: " + username);
                         } else {
                             code = 400;
-                            errorMessage = "Invalid user credentials";
+                            errorMessage = "Invalid registration credentials";
                         }
-                        // add text from request body to messages-arraylist
-                        regisMessages.add(registrationText);
-                        is.close();
                     } else {
                         code = 400;
                         errorMessage = "HTTP POST request was empty";
                         ChatServer.log(errorMessage);
-                    } */
+                    }
                 }
             }
             // if request isn't POST, we end up in a client side error
@@ -126,15 +95,14 @@ public class RegistrationHandler implements HttpHandler {
         // if handling the request fails, we end up in a server side error
         catch (IOException e) {
             code = 500;
-            errorMessage = "Error while handling the request";
+            errorMessage = "Error while handling the request" + e.getMessage();
         } catch (JSONException e) {
             code = 500;
-            errorMessage = "Error while handling JSON from request";
+            errorMessage = "Error while handling JSON from request" + e.getMessage();
         } catch (Exception e) {
             code = 500;
-            errorMessage = "ERROR: Internal server error";
+            errorMessage = "ERROR: Internal server error" + e.getMessage();
         }
-
         // Any error encountered previously is caught here
         if (code < 200 || code > 299) {
             // log-method prints code and response to server terminal

@@ -15,16 +15,15 @@ public class ChatAuthenticator extends BasicAuthenticator {
         super(realm);
         // new HashTable initialized into 'users'
         users = new Hashtable<String, User>();
-        //users.put("admin", "password"); turha?
     }
 
     @Override
     public boolean checkCredentials(String username, String password) {
         int code = 200;
         // checking if users hashtable contains username and password inserted in the request
-        if (users.containsKey(username) && users.containsValue(password)) {
+        if (users.containsKey(username)) {
             // check if key-value pair matches
-            if (users.get(username).equals(password)) {
+            if (users.get(username).getPassword().equals(password)) {
                 return true;
             }
         }
@@ -44,5 +43,4 @@ public class ChatAuthenticator extends BasicAuthenticator {
         }
         return false;
     }
-
 }
