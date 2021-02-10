@@ -70,14 +70,19 @@ public class RegistrationHandler implements HttpHandler {
                         String password = regisJson.getString("password");
                         String email = regisJson.getString("email");
 
-                        User newUser = new User(username, password, email);
+                        if (!username.trim().isEmpty() && !password.trim().isEmpty() && !email.trim().isEmpty()) {
+                            User newUser = new User(username, password, email);
 
-                        if (authenticator.addUser(username, newUser)) {
-                            exchange.sendResponseHeaders(code, -1);
-                            ChatServer.log("Added as user: " + username);
+                            if (authenticator.addUser(username, newUser)) {
+                                exchange.sendResponseHeaders(code, -1);
+                                ChatServer.log("Added as user: " + username);
+                            } else {
+                                code = 400;
+                                errorMessage = "Invalid registration credentials";
+                            }
                         } else {
                             code = 400;
-                            errorMessage = "Invalid registration credentials";
+                            errorMessage = "JSON field(s) empty in POST request";
                         }
                     } else {
                         code = 400;

@@ -116,20 +116,32 @@ public class ChatHandler implements HttpHandler {
                 String message = chatJson.getString("message");
                 LocalDateTime timeSent = null;
 
-                ChatMessage newMessage = new ChatMessage(timeSent, nickname, message);
+                if (!nickname.trim().isEmpty() && !message.trim().isEmpty()) {
+                    ChatMessage newMessage = new ChatMessage(timeSent, nickname, message);
+                    String dateStr = chatJson.getString("sent");
 
-                String dateStr = chatJson.getString("sent");
-                OffsetDateTime odt = OffsetDateTime.parse(dateStr);
-                newMessage.timeSent = odt.toLocalDateTime();
+                    if (!dateStr.trim().isEmpty()) {
+                        OffsetDateTime odt = OffsetDateTime.parse(dateStr);
+                        newMessage.timeSent = odt.toLocalDateTime();
 
-                messages.add(newMessage);
-                Collections.sort(messages, new Comparator<ChatMessage>() {
-                    @Override
-                    public int compare(ChatMessage lhs, ChatMessage rhs) {
-                        return lhs.timeSent.compareTo(rhs.timeSent);}
-                });
-                exchange.sendResponseHeaders(code, -1);
-                ChatServer.log("New message saved");
+                        messages.add(newMessage);
+
+                        Collections.sort(messages, new Comparator<ChatMessage>() {
+                            @Override
+                            public int compare(ChatMessage lhs, ChatMessage rhs) {
+                                return lhs.timeSent.compareTo(rhs.timeSent);}
+                        });
+                        exchange.sendResponseHeaders(code, -1);
+                        ChatServer.log("New message saved");
+
+                    } else {
+                        code = 400;
+                        responseBody = "JSON field 'sent' empty in POST request";
+                    }
+                } else {
+                    code = 400;
+                    responseBody = "JSON field(s) empty in POST request";
+                }
             } else {
                 code = 400;
                 responseBody = "HTTP POST request was empty";

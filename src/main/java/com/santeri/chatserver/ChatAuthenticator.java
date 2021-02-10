@@ -15,6 +15,8 @@ public class ChatAuthenticator extends BasicAuthenticator {
         super(realm);
         // new HashTable initialized into 'users'
         users = new Hashtable<String, User>();
+        User admin = new User("Santeri", "salasana", "sjkottari@email.com");
+        users.put("Santeri", admin);
     }
 
     @Override
