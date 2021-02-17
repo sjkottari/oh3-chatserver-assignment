@@ -100,13 +100,13 @@ public class RegistrationHandler implements HttpHandler {
         // if handling the request fails, we end up in a server side error
         catch (IOException e) {
             code = 500;
-            errorMessage = "Error while handling the request" + e.getMessage();
+            errorMessage = "Error while handling the request. " + e.getMessage();
         } catch (JSONException e) {
             code = 500;
-            errorMessage = "Error while handling JSON from request" + e.getMessage();
+            errorMessage = "Error while handling JSON from request. " + e.getMessage();
         } catch (Exception e) {
             code = 500;
-            errorMessage = "ERROR: Internal server error" + e.getMessage();
+            errorMessage = "ERROR: Internal server error. " + e.getMessage();
         }
         // Any error encountered previously is caught here
         if (code < 200 || code > 299) {

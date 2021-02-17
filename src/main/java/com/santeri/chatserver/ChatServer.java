@@ -36,6 +36,7 @@ public class ChatServer {
                 }
             });
 
+            ChatDatabase database = ChatDatabase.getInstance();
             ChatAuthenticator auth = new ChatAuthenticator("/chat");
             // create new Http context "/chat" and specify a handler for incoming requests
             HttpContext httpcontext = server.createContext("/chat", new ChatHandler());
@@ -46,6 +47,7 @@ public class ChatServer {
 
             server.setExecutor(null);
             server.start();
+            database.open("chatdatabase.db");
             log("ChatServer running...");
 
         } catch (FileNotFoundException e) {

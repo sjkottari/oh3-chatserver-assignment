@@ -28,6 +28,7 @@ public class ChatHandler implements HttpHandler {
     private String responseBody = "";
     // empty arraylist for storing chat messages
     private ArrayList<ChatMessage> messages = new ArrayList<ChatMessage>();
+    ChatDatabase database = ChatDatabase.getInstance();
 
     // handle-method for checking client's request, preparing server's
     // response and writing response back to client
@@ -125,7 +126,6 @@ public class ChatHandler implements HttpHandler {
                         newMessage.timeSent = odt.toLocalDateTime();
 
                         messages.add(newMessage);
-
                         Collections.sort(messages, new Comparator<ChatMessage>() {
                             @Override
                             public int compare(ChatMessage lhs, ChatMessage rhs) {
