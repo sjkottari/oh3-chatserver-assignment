@@ -12,8 +12,6 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.stream.Collectors;
 
 import com.sun.net.httpserver.Headers;
@@ -26,8 +24,6 @@ import org.json.JSONObject;
 
 public class ChatHandler implements HttpHandler {
     private String responseBody = "";
-    // empty arraylist for storing chat messages
-    private ArrayList<ChatMessage> messages = new ArrayList<ChatMessage>();
     ChatDatabase database = ChatDatabase.getInstance();
 
     // handle-method for checking client's request, preparing server's
@@ -51,13 +47,13 @@ public class ChatHandler implements HttpHandler {
             }
         } catch (IOException e) {
             code = 500;
-            responseBody = "Error while handling the request" + e.getMessage();
+            responseBody = "Error while handling the request " + e.getMessage();
         } catch (JSONException e) {
             code = 500;
-            responseBody = "Error while handling JSON in POST/GET" + e.getMessage();
+            responseBody = "Error while handling JSON in POST/GET " + e.getMessage();
         } catch (Exception e) {
             code = 500;
-            responseBody = "Internal server error" + e.getMessage();
+            responseBody = "Internal server error " + e.getMessage();
         }
 
         // Any error encountered previously is caught here
@@ -125,15 +121,10 @@ public class ChatHandler implements HttpHandler {
                         OffsetDateTime odt = OffsetDateTime.parse(dateStr);
                         newMessage.timeSent = odt.toLocalDateTime();
 
-                        messages.add(newMessage);
-                        Collections.sort(messages, new Comparator<ChatMessage>() {
-                            @Override
-                            public int compare(ChatMessage lhs, ChatMessage rhs) {
-                                return lhs.timeSent.compareTo(rhs.timeSent);}
-                        });
+                        database.storeMessages(newMessage);
+
                         exchange.sendResponseHeaders(code, -1);
                         ChatServer.log("New message saved");
-
                     } else {
                         code = 400;
                         responseBody = "JSON field 'sent' empty in POST request";
@@ -154,8 +145,12 @@ public class ChatHandler implements HttpHandler {
     // Method for handling get requests
     private int handleGetRequest(HttpExchange exchange) throws IOException, SQLException {
         int code = 200;
+        // empty arraylist for messages from database
+        ArrayList<ChatMessage> dbMessages = new ArrayList<ChatMessage>();
+        // get existing messages from database
+        dbMessages = database.getMessages();
 
-        if (messages.isEmpty()) {
+        if (dbMessages.isEmpty()) {
             ChatServer.log("No messages to deliver");
             code = 204;
             exchange.sendResponseHeaders(code, -1);
@@ -164,7 +159,7 @@ public class ChatHandler implements HttpHandler {
             JSONArray responseMessages = new JSONArray();
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX");
 
-            for (ChatMessage message : messages){
+            for (ChatMessage message : dbMessages){
                 JSONObject jsonMessage = new JSONObject();
                 jsonMessage.put("user", message.getNickname());
                 jsonMessage.put("message", message.getMessage());
@@ -178,7 +173,7 @@ public class ChatHandler implements HttpHandler {
             }
 
             // informing the client of the amount of messages sent back
-            ChatServer.log("Delivering " + messages.size() + " messages to client");
+            ChatServer.log("Delivering " + dbMessages.size() + " messages to client");
             byte[] bytes = responseMessages.toString().getBytes("UTF-8");
             exchange.sendResponseHeaders(code, bytes.length);
             OutputStream stream = exchange.getResponseBody();

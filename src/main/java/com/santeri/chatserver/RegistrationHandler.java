@@ -76,6 +76,7 @@ public class RegistrationHandler implements HttpHandler {
                             if (authenticator.addUser(username, newUser)) {
                                 exchange.sendResponseHeaders(code, -1);
                                 ChatServer.log("Added as user: " + username);
+
                             } else {
                                 code = 400;
                                 errorMessage = "Invalid registration credentials";

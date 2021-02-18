@@ -52,11 +52,9 @@ public class ChatServer {
 
         } catch (FileNotFoundException e) {
             // failed at finding certificate file
-            System.out.println("Certificate not found");
-            e.printStackTrace();
+            log("Certificate not found " + e.getMessage());
         } catch (Exception e) {
-            System.out.println("Failed to create HTTP server");
-            e.printStackTrace();
+            log("Failed to create HTTP server" + e.getMessage());
         }
 
     }
