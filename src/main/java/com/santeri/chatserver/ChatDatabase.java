@@ -1,6 +1,7 @@
 package com.santeri.chatserver;
 
 import java.io.File;
+import java.security.SecureRandom;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -8,11 +9,16 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Base64;
+
+import org.apache.commons.codec.binary.Base16;
+import org.apache.commons.codec.digest.Crypt;
 
 public class ChatDatabase {
 
     private static ChatDatabase singleton = null;
     private Connection connectionObj = null;
+    private SecureRandom secureRandom = null;
 
     // implement database as singleton and synchronize the method
     public static synchronized ChatDatabase getInstance() {
@@ -31,6 +37,14 @@ public class ChatDatabase {
 
     public Connection getConnection() {
         return connectionObj;
+    }
+
+    public ChatDatabase(SecureRandom rand) {
+        secureRandom = rand;
+    }
+
+    public SecureRandom getRandom() {
+        return secureRandom;
     }
 
     // method for opening the database
@@ -66,9 +80,11 @@ public class ChatDatabase {
     private boolean initializeDatabase() throws SQLException {
 
         String createRegTable = "CREATE TABLE IF NOT EXISTS registration \n"
-                              + "(username varchar(50) PRIMARY KEY NOT NULL, \n"
+                              + "(username varchar(50) NOT NULL, \n"
                               + "password varchar(100) NOT NULL, \n"
-                              + "email varchar(100) NOT NULL)";
+                              + "salt varchar(20) NOT NULL, \n"
+                              + "email varchar(100) NOT NULL, \n"
+                              + "PRIMARY KEY(username, password, salt))";
         String createChatTable = "CREATE TABLE IF NOT EXISTS chatmessage \n"
                                + "(nickname varchar(50) NOT NULL, \n"
                                + "message varchar(500) NOT NULL, \n"
@@ -92,8 +108,17 @@ public class ChatDatabase {
     public boolean registerUser(String username, User newUser) throws SQLException {
 
         if (!validateUser(username)) {
+
+            byte bytes[] = new byte[13];
+            getRandom().nextBytes(bytes);
+            String saltBytes = new String(Base64.getEncoder().encode(bytes));
+            String salt = "$6$" + saltBytes;
+
+            String hashedPassword = Crypt.crypt(newUser.getPassword(), salt);
+
             String createRegistration = "INSERT INTO registration VALUES('" + newUser.getUsername() 
-                                      + "', '" + newUser.getPassword() 
+                                      + "', '" + hashedPassword
+                                      + "', '" + salt
                                       + "', '" + newUser.getEmail() + "')";
             Statement stmnt = connectionObj.createStatement();
             stmnt.executeUpdate(createRegistration);
@@ -136,9 +161,9 @@ public class ChatDatabase {
 
             while (rs.next()){
                 String dbUser = rs.getString("username");
-                String dbPasswd = rs.getString("password");
+                String hashedPwd = rs.getString("password");
 
-                if(dbUser.equals(username) && dbPasswd.equals(password)) {
+                if(dbUser.equals(username) && hashedPwd.equals(Crypt.crypt(password, hashedPwd))) {
                     return true;
                 }
             }
