@@ -10,6 +10,7 @@ import java.sql.Statement;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
 
 import org.apache.commons.codec.binary.Base16;
 import org.apache.commons.codec.digest.Crypt;
@@ -185,14 +186,15 @@ public class ChatDatabase {
     }
 
     // method for getting all messages from the database
-    public ArrayList<ChatMessage> getMessages() throws SQLException {
+    public List<ChatMessage> getMessages() throws SQLException {
 
-        ArrayList<ChatMessage> messages = new ArrayList<ChatMessage>();
-        String getMessage = "SELECT * FROM chatmessage";
+        int i = 0;
+        List<ChatMessage> messages = new ArrayList<ChatMessage>();
+        String getMessage = "SELECT * FROM chatmessage ORDER BY timestamp ASC";
 
         try (Statement stmnt = connectionObj.createStatement()) {
             ResultSet rs = stmnt.executeQuery(getMessage);
-            while (rs.next()) {
+            while (rs.next() && i < 100) {
                 String dbNick = rs.getString("nickname");
                 String dbMsg = rs.getString("message");
                 LocalDateTime dbTime = null;
@@ -201,10 +203,35 @@ public class ChatDatabase {
                 
                 msg.setSent(rs.getLong("timestamp"));
                 messages.add(msg);
+                i++;
             }
         } catch (SQLException e) {
             ChatServer.log("Error while getting chat messages from database " + e.getMessage());
         }
         return messages;
+    }
+
+    public List<ChatMessage> getLatestMessages(long since) throws SQLException {
+        
+        List<ChatMessage> list = new ArrayList<ChatMessage>();
+        String getLatestMessage = "SELECT * FROM chatmessage WHERE timestamp > " + since
+                                + " ORDER BY timestamp ASC";
+        
+        try (Statement stmnt = connectionObj.createStatement()) {
+            ResultSet rs = stmnt.executeQuery(getLatestMessage);
+            while (rs.next()) {
+                String dbNick = rs.getString("nickname");
+                String dbMsg = rs.getString("message");
+                LocalDateTime dbTime = null;
+
+                ChatMessage msg = new ChatMessage(dbTime, dbNick, dbMsg);
+
+                msg.setSent(rs.getLong("timestamp"));
+                list.add(msg);
+            }
+        } catch (SQLException e) {
+            ChatServer.log("Error while getting latest chat messages from database " + e.getMessage());
+        }
+        return list;
     }
 }

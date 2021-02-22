@@ -9,9 +9,11 @@ import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.stream.Collectors;
 
 import com.sun.net.httpserver.Headers;
@@ -145,41 +147,66 @@ public class ChatHandler implements HttpHandler {
     // Method for handling get requests
     private int handleGetRequest(HttpExchange exchange) throws IOException, SQLException {
         int code = 200;
-        // empty arraylist for messages from database
-        ArrayList<ChatMessage> dbMessages = new ArrayList<ChatMessage>();
-        // get existing messages from database
-        dbMessages = database.getMessages();
+        Headers headers = exchange.getResponseHeaders();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX");
+        List<ChatMessage> messageList = new ArrayList<ChatMessage>();
+        messageList = null;
 
-        if (dbMessages.isEmpty()) {
-            ChatServer.log("No messages to deliver");
-            code = 204;
-            exchange.sendResponseHeaders(code, -1);
-            return code;
+        if (headers.containsKey("If-Modified-Since")) {
+            String modifiedSince = headers.get("If-Modified-Since").get(0);
+
+            ZonedDateTime modifiedToSend = ZonedDateTime.parse(modifiedSince, formatter);
+            LocalDateTime fromWhichDate = modifiedToSend.toLocalDateTime();
+
+            long messagesSince = -1;
+            messagesSince = fromWhichDate.toInstant(ZoneOffset.UTC).toEpochMilli();
+
+            messageList = database.getLatestMessages(messagesSince);
+
         } else {
-            JSONArray responseMessages = new JSONArray();
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX");
+            messageList = database.getMessages();
 
-            for (ChatMessage message : dbMessages){
-                JSONObject jsonMessage = new JSONObject();
-                jsonMessage.put("user", message.getNickname());
-                jsonMessage.put("message", message.getMessage());
-
-                LocalDateTime date = message.timeSent;
-                ZonedDateTime toSend = ZonedDateTime.of(date, ZoneId.of("UTC"));
-                String dateText = toSend.format(formatter);
-                jsonMessage.put("sent", dateText);
-
-                responseMessages.put(jsonMessage);
-            }
-
-            // informing the client of the amount of messages sent back
-            ChatServer.log("Delivering " + dbMessages.size() + " messages to client");
-            byte[] bytes = responseMessages.toString().getBytes("UTF-8");
-            exchange.sendResponseHeaders(code, bytes.length);
-            OutputStream stream = exchange.getResponseBody();
-            stream.write(bytes);
-            stream.close();
+            if (messageList.isEmpty()) {
+                ChatServer.log("No messages to deliver");
+                code = 204;
+                exchange.sendResponseHeaders(code, -1);
+                return code;
+            } 
         }
+
+        JSONArray responseMessages = new JSONArray();
+        LocalDateTime latestMsg = null;
+
+        for (ChatMessage message : messageList){
+            JSONObject jsonMessage = new JSONObject();
+            jsonMessage.put("user", message.getNickname());
+            jsonMessage.put("message", message.getMessage());
+
+            LocalDateTime date = message.timeSent;
+
+            if (date.isAfter(latestMsg)) {
+                latestMsg = date;
+            }
+            ZonedDateTime toSend = ZonedDateTime.of(date, ZoneId.of("UTC"));
+            String dateText = toSend.format(formatter);
+            jsonMessage.put("sent", dateText);
+
+            responseMessages.put(jsonMessage);
+        }
+
+        ZonedDateTime latestToSend = ZonedDateTime.of(latestMsg, ZoneId.of("UTC"));
+        String latestDateText = latestToSend.format(formatter);
+
+        headers.add("Last-Modified", latestDateText);
+
+        // informing the client of the amount of messages sent back
+        ChatServer.log("Delivering " + messageList.size() + " messages to client");
+        byte[] bytes = responseMessages.toString().getBytes("UTF-8");
+        exchange.sendResponseHeaders(code, bytes.length);
+        OutputStream stream = exchange.getResponseBody();
+        stream.write(bytes);
+        stream.close();
+        
         return code;
     }
 }
