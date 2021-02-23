@@ -12,14 +12,13 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 
-import org.apache.commons.codec.binary.Base16;
 import org.apache.commons.codec.digest.Crypt;
 
 public class ChatDatabase {
 
     private static ChatDatabase singleton = null;
     private Connection connectionObj = null;
-    private SecureRandom secureRandom = null;
+    SecureRandom random = new SecureRandom();
 
     // implement database as singleton and synchronize the method
     public static synchronized ChatDatabase getInstance() {
@@ -38,14 +37,6 @@ public class ChatDatabase {
 
     public Connection getConnection() {
         return connectionObj;
-    }
-
-    public ChatDatabase(SecureRandom rand) {
-        secureRandom = rand;
-    }
-
-    public SecureRandom getRandom() {
-        return secureRandom;
     }
 
     // method for opening the database
@@ -110,11 +101,13 @@ public class ChatDatabase {
 
         if (!validateUser(username)) {
 
+            // creating the salt for hashing 
             byte bytes[] = new byte[13];
-            getRandom().nextBytes(bytes);
+            random.nextBytes(bytes);
             String saltBytes = new String(Base64.getEncoder().encode(bytes));
             String salt = "$6$" + saltBytes;
 
+            // hashing the password with salt using crypt -library method
             String hashedPassword = Crypt.crypt(newUser.getPassword(), salt);
 
             String createRegistration = "INSERT INTO registration VALUES('" + newUser.getUsername() 
@@ -155,7 +148,8 @@ public class ChatDatabase {
     // method for authenticating existing users through /login-function
     public boolean authenticateUser(String username, String password) throws SQLException {
 
-        String getCredentials = "SELECT username, password FROM registration WHERE username = '" + username + "'";
+        String getCredentials = "SELECT username, password FROM registration WHERE username = '" 
+                                + username + "'";
 
         try (Statement stmnt = connectionObj.createStatement()) {
             ResultSet rs = stmnt.executeQuery(getCredentials);
@@ -176,7 +170,8 @@ public class ChatDatabase {
     // method for storing messages to database
     public void storeMessages(ChatMessage m) throws SQLException {
 
-        String storeUpdate = "INSERT INTO chatmessage VALUES ('" + m.getNickname() + "','" + m.getMessage() + "','" + m.dateAsInt() + "')";
+        String storeUpdate = "INSERT INTO chatmessage VALUES ('" + m.getNickname() + "','" 
+                             + m.getMessage() + "','" + m.dateAsInt() + "')";
 
         try (Statement stmnt = connectionObj.createStatement()) {
             stmnt.executeUpdate(storeUpdate);
@@ -185,15 +180,17 @@ public class ChatDatabase {
         }
     }
 
-    // method for getting all messages from the database
+    // method for getting "all" messages from the database
     public List<ChatMessage> getMessages() throws SQLException {
-
         int i = 0;
+        // list for chatmessages queried from database
         List<ChatMessage> messages = new ArrayList<ChatMessage>();
-        String getMessage = "SELECT * FROM chatmessage ORDER BY timestamp ASC";
+        String getMessage = "SELECT * FROM chatmessage ORDER BY timestamp DESC";
 
         try (Statement stmnt = connectionObj.createStatement()) {
             ResultSet rs = stmnt.executeQuery(getMessage);
+            // "i" reduces the amount of "all" chatmessages returned to client
+            // to just 100 newest messages
             while (rs.next() && i < 100) {
                 String dbNick = rs.getString("nickname");
                 String dbMsg = rs.getString("message");
@@ -211,9 +208,11 @@ public class ChatDatabase {
         return messages;
     }
 
+    // method for getting just the latest messages (after a certain date) from the database
     public List<ChatMessage> getLatestMessages(long since) throws SQLException {
-        
+        // list for chatmessages queried from database
         List<ChatMessage> list = new ArrayList<ChatMessage>();
+        // "since" is the "If-Modified-Since" value that is received with the request from the client
         String getLatestMessage = "SELECT * FROM chatmessage WHERE timestamp > " + since
                                 + " ORDER BY timestamp ASC";
         

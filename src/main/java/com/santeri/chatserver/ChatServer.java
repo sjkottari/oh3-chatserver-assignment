@@ -36,6 +36,7 @@ public class ChatServer {
                 }
             });
 
+            // database singelton object
             ChatDatabase database = ChatDatabase.getInstance();
             ChatAuthenticator auth = new ChatAuthenticator("/chat");
             // create new Http context "/chat" and specify a handler for incoming requests
@@ -47,7 +48,7 @@ public class ChatServer {
 
             server.setExecutor(null);
             server.start();
-            database.open("chatdatabase.db");
+            database.open("chatdatabase.db"); // open (and initialize database)
             log("ChatServer running...");
 
         } catch (FileNotFoundException e) {

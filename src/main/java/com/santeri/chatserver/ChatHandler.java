@@ -56,6 +56,7 @@ public class ChatHandler implements HttpHandler {
         } catch (Exception e) {
             code = 500;
             responseBody = "Internal server error " + e.getMessage();
+            e.printStackTrace();
         }
 
         // Any error encountered previously is caught here
@@ -102,8 +103,8 @@ public class ChatHandler implements HttpHandler {
         } else {
             InputStream is = exchange.getRequestBody();
             // read text from request body
-            String messageText = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8)).lines()
-                                                    .collect(Collectors.joining("\n"));
+            String messageText = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))
+                                                    .lines().collect(Collectors.joining("\n"));
             ChatServer.log(messageText); // send read message to client
             is.close();
 
@@ -147,45 +148,50 @@ public class ChatHandler implements HttpHandler {
     // Method for handling get requests
     private int handleGetRequest(HttpExchange exchange) throws IOException, SQLException {
         int code = 200;
-        Headers headers = exchange.getResponseHeaders();
+        LocalDateTime latestMsg = null;
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX");
+        // new empty list for chatmessages to be sent to the client
         List<ChatMessage> messageList = new ArrayList<ChatMessage>();
-        messageList = null;
 
-        if (headers.containsKey("If-Modified-Since")) {
-            String modifiedSince = headers.get("If-Modified-Since").get(0);
+        // check if GET headers contain "If-Modified-Since"-key and corresponding value. 
+        // If true, only messages after certain timestamp are returned to messageList and 
+        // later to client. If false, 100 newest messages are returned to client.
+        if (exchange.getRequestHeaders().containsKey("If-Modified-Since")) {
+            String modifiedSince = exchange.getRequestHeaders().get("If-Modified-Since").get(0);
 
             ZonedDateTime modifiedToSend = ZonedDateTime.parse(modifiedSince, formatter);
             LocalDateTime fromWhichDate = modifiedToSend.toLocalDateTime();
-
             long messagesSince = -1;
             messagesSince = fromWhichDate.toInstant(ZoneOffset.UTC).toEpochMilli();
 
             messageList = database.getLatestMessages(messagesSince);
-
         } else {
             messageList = database.getMessages();
-
-            if (messageList.isEmpty()) {
-                ChatServer.log("No messages to deliver");
-                code = 204;
-                exchange.sendResponseHeaders(code, -1);
-                return code;
-            } 
         }
 
-        JSONArray responseMessages = new JSONArray();
-        LocalDateTime latestMsg = null;
+        // if there are no messages (or new messages) to send, do this
+        if (messageList.isEmpty()) {
+            ChatServer.log("No messages to deliver");
+            code = 204;
+            exchange.sendResponseHeaders(code, -1);
+            return code;
+        }
 
+        // array for chatmessage jsonobjects
+        JSONArray responseMessages = new JSONArray();
+
+        // every chatmessage in the returned messageList is put into a jsonobject
+        // which is then put into jsonarray. Datetime variable "latestMsg" is kept
+        // up to date on the newest message (timestamp) in the database.
         for (ChatMessage message : messageList){
             JSONObject jsonMessage = new JSONObject();
             jsonMessage.put("user", message.getNickname());
             jsonMessage.put("message", message.getMessage());
 
-            LocalDateTime date = message.timeSent;
+            LocalDateTime date = message.getTimestamp();
 
-            if (date.isAfter(latestMsg)) {
-                latestMsg = date;
+            if (latestMsg == null || message.getTimestamp().compareTo(latestMsg) > 0) {
+                latestMsg = message.getTimestamp();
             }
             ZonedDateTime toSend = ZonedDateTime.of(date, ZoneId.of("UTC"));
             String dateText = toSend.format(formatter);
@@ -193,11 +199,13 @@ public class ChatHandler implements HttpHandler {
 
             responseMessages.put(jsonMessage);
         }
-
+        
+        // latestMsg is converted to String format
         ZonedDateTime latestToSend = ZonedDateTime.of(latestMsg, ZoneId.of("UTC"));
         String latestDateText = latestToSend.format(formatter);
 
-        headers.add("Last-Modified", latestDateText);
+        // key "Last-Modified" with latestDate-value is added to the headers
+        exchange.getResponseHeaders().add("Last-Modified", latestDateText);
 
         // informing the client of the amount of messages sent back
         ChatServer.log("Delivering " + messageList.size() + " messages to client");

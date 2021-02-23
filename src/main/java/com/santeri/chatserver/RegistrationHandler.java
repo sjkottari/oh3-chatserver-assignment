@@ -60,7 +60,6 @@ public class RegistrationHandler implements HttpHandler {
                     // read registration credentials from request body
                     String registrationText = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))
                             .lines().collect(Collectors.joining("\n"));
-                    ChatServer.log(registrationText);
                     is.close();
 
                     if (registrationText != null && !registrationText.trim().isEmpty()) {
@@ -78,7 +77,7 @@ public class RegistrationHandler implements HttpHandler {
                                 ChatServer.log("Added as user: " + username);
 
                             } else {
-                                code = 400;
+                                code = 401;
                                 errorMessage = "Invalid registration credentials";
                             }
                         } else {
@@ -108,6 +107,7 @@ public class RegistrationHandler implements HttpHandler {
         } catch (Exception e) {
             code = 500;
             errorMessage = "ERROR: Internal server error. " + e.getMessage();
+            e.printStackTrace();
         }
         // Any error encountered previously is caught here
         if (code < 200 || code > 299) {
