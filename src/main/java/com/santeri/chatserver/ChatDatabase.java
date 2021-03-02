@@ -233,4 +233,12 @@ public class ChatDatabase {
         }
         return list;
     }
+
+    public void close() throws SQLException{
+        try {
+            connectionObj.close();
+        } catch (SQLException e) {
+            ChatServer.log("Error while closing database connection " + e.getMessage());
+        }
+    }
 }

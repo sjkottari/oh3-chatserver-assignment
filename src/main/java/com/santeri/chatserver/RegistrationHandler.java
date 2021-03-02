@@ -30,6 +30,8 @@ public class RegistrationHandler implements HttpHandler {
         int code = 200;
         String errorMessage = "";
 
+        ChatServer.log("Request being handled in thread: " + Thread.currentThread().getId());
+
         try {
             // registration POST request handling
             if (exchange.getRequestMethod().equalsIgnoreCase("POST")) {

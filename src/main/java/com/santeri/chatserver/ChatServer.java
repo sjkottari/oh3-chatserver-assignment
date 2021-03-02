@@ -8,6 +8,8 @@ import java.io.FileNotFoundException;
 import java.net.InetSocketAddress;
 import java.security.KeyStore;
 import java.time.LocalDateTime;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
@@ -23,9 +25,13 @@ public class ChatServer {
     public static void main(String[] args) throws Exception {
         try {
             log("Launching ChatServer");
+            if (args.length != 3) {
+                log("Usage 'java -jar jar-file.jar database-name.db keystore.jks cert-password");
+                return;
+            }
             // create a new Http server instance to socket address (port) 8001
             HttpsServer server = HttpsServer.create(new InetSocketAddress(8001), 0);
-            SSLContext sslContext = chatServerSSLContext();
+            SSLContext sslContext = chatServerSSLContext(args);
 
             server.setHttpsConfigurator(new HttpsConfigurator(sslContext) {
                 public void configure(HttpsParameters params) {
@@ -46,10 +52,22 @@ public class ChatServer {
             // create new context for registration with reference to authenticator
             server.createContext("/registration", new RegistrationHandler(auth));
 
-            server.setExecutor(null);
+            database.open(args[0]); // open (and initialize database)
+            Executor exec = Executors.newCachedThreadPool();
+            server.setExecutor(exec);
             server.start();
-            database.open("chatdatabase.db"); // open (and initialize database)
             log("ChatServer running...");
+
+            boolean running = true;
+            while (running) {
+                String input = System.console().readLine();
+
+                if (input.equalsIgnoreCase("/quit")) {
+                    running = false;
+                    server.stop(3);
+                    database.close();
+                }
+            }
 
         } catch (FileNotFoundException e) {
             // failed at finding certificate file
@@ -60,12 +78,12 @@ public class ChatServer {
 
     }
 
-    private static SSLContext chatServerSSLContext() throws Exception {
+    private static SSLContext chatServerSSLContext(String[] args) throws Exception {
 
         // SSL passphrase
-        char[] passphrase = "kuukupoopotin".toCharArray();
+        char[] passphrase = args[2].toCharArray();
         KeyStore ks = KeyStore.getInstance("JKS");
-        ks.load(new FileInputStream("keystore.jks"), passphrase);
+        ks.load(new FileInputStream(args[1]), passphrase);
 
         KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
         kmf.init(ks, passphrase);
