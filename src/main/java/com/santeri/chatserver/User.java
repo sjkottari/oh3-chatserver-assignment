@@ -6,7 +6,7 @@ public class User {
     String password;
     String email;
 
-    public User(String user, String passwd, String emailaddr) {
+    public User(final String user, final String passwd, final String emailaddr) {
         username = user;
         password = passwd;
         email = emailaddr;

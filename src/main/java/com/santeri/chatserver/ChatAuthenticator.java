@@ -10,7 +10,7 @@ public class ChatAuthenticator extends BasicAuthenticator {
 
     ChatDatabase database = ChatDatabase.getInstance();
     // constructor for ChatAuthenticator, receives realm '/chat' or '/registration'
-    public ChatAuthenticator(String realm) {
+    public ChatAuthenticator(final String realm) {
         super(realm);
     }
 

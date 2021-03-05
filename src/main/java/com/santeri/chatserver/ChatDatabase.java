@@ -31,7 +31,7 @@ public class ChatDatabase {
     private ChatDatabase() {
     }
 
-    public ChatDatabase(Connection connection) {
+    public ChatDatabase(final Connection connection) {
         connectionObj = connection;
     }
 

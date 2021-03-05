@@ -9,7 +9,7 @@ public class ChatMessage {
     public String nickname;
     public String message;
 
-    public ChatMessage(LocalDateTime sent, String nick, String msg) {
+    public ChatMessage(final LocalDateTime sent, final String nick, final String msg) {
         timeSent = sent;
         nickname = nick;
         message = msg;
@@ -19,7 +19,7 @@ public class ChatMessage {
         return timeSent.toInstant(ZoneOffset.UTC).toEpochMilli();
     }
 
-    void setSent(long epoch) {
+    void setSent(final long epoch) {
         timeSent = LocalDateTime.ofInstant(Instant.ofEpochMilli(epoch), ZoneOffset.UTC);
     }
 
