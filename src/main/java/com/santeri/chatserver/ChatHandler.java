@@ -107,7 +107,6 @@ public class ChatHandler implements HttpHandler {
             // read text from request body
             String messageText = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))
                                                     .lines().collect(Collectors.joining("\n"));
-            ChatServer.log(messageText); // send read message to client
             is.close();
 
             // confirm the read request body is not empty

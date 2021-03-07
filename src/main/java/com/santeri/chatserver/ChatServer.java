@@ -52,25 +52,26 @@ public class ChatServer {
             // create new context for registration with reference to authenticator
             server.createContext("/registration", new RegistrationHandler(auth));
 
-            database.open(args[0]); // open (and initialize database)
+            database.open(args[0]); // open (and initialize) database
+            // enable multi-thread execution
             Executor exec = Executors.newCachedThreadPool();
             server.setExecutor(exec);
             server.start();
             log("ChatServer running...");
 
+            // while-loop for handling server & DB shutdown with given command
             boolean running = true;
             while (running) {
                 String input = System.console().readLine();
 
                 if (input.equalsIgnoreCase("/quit")) {
                     running = false;
-                    server.stop(3);
                     database.close();
+                    server.stop(3);
                 }
             }
 
         } catch (FileNotFoundException e) {
-            // failed at finding certificate file
             log("Certificate not found " + e.getMessage());
         } catch (Exception e) {
             log("Failed to create HTTP server" + e.getMessage());

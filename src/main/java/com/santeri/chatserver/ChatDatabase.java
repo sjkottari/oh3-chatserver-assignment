@@ -1,7 +1,6 @@
 package com.santeri.chatserver;
 
 import java.io.File;
-import java.security.SecureRandom;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -9,7 +8,6 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 
 import org.apache.commons.codec.digest.Crypt;
@@ -18,7 +16,6 @@ public class ChatDatabase {
 
     private static ChatDatabase singleton = null;
     private Connection connectionObj = null;
-    SecureRandom random = new SecureRandom();
 
     // implement database as singleton and synchronize the method
     public static synchronized ChatDatabase getInstance() {
@@ -74,9 +71,8 @@ public class ChatDatabase {
         String createRegTable = "CREATE TABLE IF NOT EXISTS registration \n"
                               + "(username varchar(50) NOT NULL, \n"
                               + "password varchar(100) NOT NULL, \n"
-                              + "salt varchar(20) NOT NULL, \n"
                               + "email varchar(100) NOT NULL, \n"
-                              + "PRIMARY KEY(username, password, salt))";
+                              + "PRIMARY KEY(username, password))";
         String createChatTable = "CREATE TABLE IF NOT EXISTS chatmessage \n"
                                + "(nickname varchar(50) NOT NULL, \n"
                                + "message varchar(500) NOT NULL, \n"
@@ -99,20 +95,12 @@ public class ChatDatabase {
     // method for registering a new user into the database
     public boolean registerUser(String username, User newUser) throws SQLException {
 
-        if (!validateUser(username)) {
-
-            // creating the salt for hashing 
-            byte bytes[] = new byte[13];
-            random.nextBytes(bytes);
-            String saltBytes = new String(Base64.getEncoder().encode(bytes));
-            String salt = "$6$" + saltBytes;
-
-            // hashing the password with salt using crypt -library method
-            String hashedPassword = Crypt.crypt(newUser.getPassword(), salt);
+        if (validateUser(username)) {
+            // hashing the password using crypt -library method
+            String hashedPassword = Crypt.crypt(newUser.getPassword());
 
             String createRegistration = "INSERT INTO registration VALUES('" + newUser.getUsername() 
                                       + "', '" + hashedPassword
-                                      + "', '" + salt
                                       + "', '" + newUser.getEmail() + "')";
             Statement stmnt = connectionObj.createStatement();
             stmnt.executeUpdate(createRegistration);
@@ -128,7 +116,7 @@ public class ChatDatabase {
     private boolean validateUser(String user) throws SQLException {
         
         String getUser = "SELECT username FROM registration WHERE username = '" + user + "'";
-        ChatServer.log("User to be checked: " + user );
+        ChatServer.log("New user to be checked: " + user );
 
         try (Statement stmnt = connectionObj.createStatement()) {
             ResultSet rs = stmnt.executeQuery(getUser);
@@ -137,12 +125,12 @@ public class ChatDatabase {
                 String dbUser = rs.getString("username");
                 if (dbUser.equals(user)) {
                     ChatServer.log("User already registered to database");
-                    return true;
+                    return false;
                 }
             }
         }
-        ChatServer.log("No match found, returning 'false'");
-        return false;
+        ChatServer.log("No match found");
+        return true;
     }
 
     // method for authenticating existing users through /login-function
