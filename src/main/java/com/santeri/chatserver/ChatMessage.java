@@ -8,11 +8,15 @@ public class ChatMessage {
     public LocalDateTime timeSent;
     public String nickname;
     public String message;
+    public String location;
+    public String temperature;
 
-    public ChatMessage(final LocalDateTime sent, final String nick, final String msg) {
+    public ChatMessage(final LocalDateTime sent, final String nick, final String msg, final String loc, final String tmp) {
         timeSent = sent;
         nickname = nick;
         message = msg;
+        location = loc;
+        temperature = tmp;
     }
 
     long dateAsInt() {
@@ -33,5 +37,13 @@ public class ChatMessage {
 
     public LocalDateTime getTimestamp() {
         return timeSent;
+    }
+
+    public String getLocation() {
+        return location;
+    }
+
+    public String getTemperature() {
+        return temperature;
     }
 }

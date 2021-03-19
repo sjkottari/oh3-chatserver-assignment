@@ -4,6 +4,8 @@
 package com.santeri.chatserver;
 
 import java.io.*;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
@@ -16,6 +18,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.w3c.dom.Document;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.w3c.dom.Element;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
@@ -23,6 +33,7 @@ import com.sun.net.httpserver.HttpHandler;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.xml.sax.InputSource;
 
 public class ChatHandler implements HttpHandler {
     private String responseBody = "";
@@ -116,17 +127,69 @@ public class ChatHandler implements HttpHandler {
                 String nickname = chatJson.getString("user");
                 String message = chatJson.getString("message");
                 LocalDateTime timeSent = null;
+                String location = null;
+                String temperature = null;
 
                 if (!nickname.trim().isEmpty() && !message.trim().isEmpty()) {
-                    ChatMessage newMessage = new ChatMessage(timeSent, nickname, message);
-                    String dateStr = chatJson.getString("sent");
 
+                    String dateStr = chatJson.getString("sent");
                     if (!dateStr.trim().isEmpty()) {
+                        //LocalDateTime timeSent = null;
                         OffsetDateTime odt = OffsetDateTime.parse(dateStr);
-                        newMessage.timeSent = odt.toLocalDateTime();
+                        timeSent = odt.toLocalDateTime();
+
+                        ChatMessage newMessage = new ChatMessage(timeSent, nickname, message, location, temperature);
+
+                        if (chatJson.has("location")) {
+                            location = chatJson.getString("location");
+
+                            if (!location.trim().isEmpty()) {
+                                URL url = new URL("http://opendata.fmi.fi/wfs/fin?service=WFS&version=2.0.0&request=GetFeature&storedquery_id=fmi::observations::weather::timevaluepair&place=" + location + "&parameters=temperature&");
+    
+                                HttpURLConnection urlConnection = null;
+                                InputStream inputStream = null;
+    
+                                try {
+                                    urlConnection = (HttpURLConnection) url.openConnection();
+                                    urlConnection.setReadTimeout(10000);
+                                    urlConnection.setConnectTimeout(20000);
+    
+                                    urlConnection.setRequestMethod("GET");
+                                    urlConnection.setDoOutput(true); //tarviiko?
+                                    urlConnection.setDoInput(true); //tarviiko?
+    
+                                    System.out.println(urlConnection.getResponseCode());
+                                    inputStream = urlConnection.getInputStream();
+                                    String inputDump = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8)).lines()
+                                                       .collect(Collectors.joining("\n"));
+                                    inputStream.close();
+    
+                                    Document doc = convertToXML(inputDump);
+    
+                                    NodeList weatherList = doc.getElementsByTagName("wml2:MeasurementTVP");
+                                    Node node = weatherList.item(weatherList.getLength()-1);
+                                    if (node.getNodeType() == Node.ELEMENT_NODE) {
+                                        Element elem = (Element) node;
+                                        temperature = elem.getElementsByTagName("wml2:value").item(0).getTextContent();
+    
+                                        newMessage.location = location;
+                                        newMessage.temperature = temperature;
+                                    }
+    
+                                } catch (IOException e) {
+                                    e.printStackTrace(); //change this
+                                } finally {
+                                    if (urlConnection != null) {
+                                        urlConnection.disconnect();
+                                    }
+                                    if (inputStream != null) {
+                                        inputStream.close();
+                                    }
+                                }
+                            }
+                        }
 
                         database.storeMessages(newMessage);
-
                         exchange.sendResponseHeaders(code, -1);
                         ChatServer.log("New message saved");
                     } else {
@@ -217,5 +280,17 @@ public class ChatHandler implements HttpHandler {
         stream.close();
         
         return code;
+    }
+
+    private static Document convertToXML(String xmlString) throws Exception {
+
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        factory.setNamespaceAware(true);
+        DocumentBuilder builder = null;
+        Document doc = null;
+
+        builder = factory.newDocumentBuilder();
+        doc = builder.parse(new InputSource(new StringReader(xmlString)));
+        return doc;
     }
 }

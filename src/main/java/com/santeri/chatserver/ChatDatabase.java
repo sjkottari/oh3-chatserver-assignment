@@ -77,6 +77,8 @@ public class ChatDatabase {
                                + "(nickname varchar(50) NOT NULL, \n"
                                + "message varchar(500) NOT NULL, \n"
                                + "timestamp numeric NOT NULL, \n"
+                               + "location text, \n"
+                               + "temperature text, \n"
                                + "PRIMARY KEY(nickname, timestamp))";
         try {
             if (null != connectionObj) {
@@ -159,7 +161,7 @@ public class ChatDatabase {
     public void storeMessages(ChatMessage m) throws SQLException {
 
         String storeUpdate = "INSERT INTO chatmessage VALUES ('" + m.getNickname() + "','" 
-                             + m.getMessage() + "','" + m.dateAsInt() + "')";
+                             + m.getMessage() + "','" + m.dateAsInt() + "', '" + m.getLocation() + "', '" + m.getTemperature() + "')";
 
         try (Statement stmnt = connectionObj.createStatement()) {
             stmnt.executeUpdate(storeUpdate);

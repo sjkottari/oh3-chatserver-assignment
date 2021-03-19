@@ -42,7 +42,7 @@ public class ChatServer {
                 }
             });
 
-            // database singelton object
+            // database singleton object
             ChatDatabase database = ChatDatabase.getInstance();
             ChatAuthenticator auth = new ChatAuthenticator("/chat");
             // create new Http context "/chat" and specify a handler for incoming requests
