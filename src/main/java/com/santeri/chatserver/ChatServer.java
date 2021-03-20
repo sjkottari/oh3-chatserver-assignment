@@ -1,5 +1,10 @@
-// Made by: Santeri Kottari
-// Based on works made by: Antti Juustila https://github.com/anttijuu
+/* 
+    Programming 3 Course Assignment - ChatServer
+    Author: Santeri Kottari https://github.com/sjkottari
+    Project repository: https://github.com/sjkottari/oh3-chatserver
+    Based on works made by Antti Juustila https://github.com/anttijuu
+    Information Processing Science - University of Oulu
+*/
 
 package com.santeri.chatserver;
 
@@ -22,17 +27,22 @@ import com.sun.net.httpserver.HttpsParameters;
 import com.sun.net.httpserver.HttpsServer;
 
 public class ChatServer {
+    // Main-method of ChatServer. First, a new server instance is created to socket address 
+    // (port) 8001. Then a new SSLContext is created which configures the server to use 
+    // TLS/HTTPS. Onwards from line 54, new database singleton object and new Http contexts 
+    // "/chat" and "/registration" are created. Http contexts have appropriate 
+    // authentication and handles. Multi thread execution is also enabled on line 64.
     public static void main(String[] args) throws Exception {
         try {
             log("Launching ChatServer");
             if (args.length != 3) {
-                log("Usage 'java -jar jar-file.jar database-name.db keystore.jks cert-password");
+                log("Usage 'java -jar jar-file.jar database-name.db keystore.jks cert-password'");
                 return;
             }
-            // create a new Http server instance to socket address (port) 8001
             HttpsServer server = HttpsServer.create(new InetSocketAddress(8001), 0);
             SSLContext sslContext = chatServerSSLContext(args);
 
+            // Configuring server to use SSLContext for TLS/HTTPS-connection
             server.setHttpsConfigurator(new HttpsConfigurator(sslContext) {
                 public void configure(HttpsParameters params) {
                     InetSocketAddress remote = params.getClientAddress();
@@ -41,25 +51,22 @@ public class ChatServer {
                     params.setSSLParameters(sslparams);
                 }
             });
-
-            // database singleton object
             ChatDatabase database = ChatDatabase.getInstance();
             ChatAuthenticator auth = new ChatAuthenticator("/chat");
-            // create new Http context "/chat" and specify a handler for incoming requests
+
             HttpContext httpcontext = server.createContext("/chat", new ChatHandler());
-            // set authenticator for httpcontext
             httpcontext.setAuthenticator(auth);
-            // create new context for registration with reference to authenticator
             server.createContext("/registration", new RegistrationHandler(auth));
 
-            database.open(args[0]); // open (and initialize) database
-            // enable multi-thread execution
+            // open database with name argument
+            database.open(args[0]);
+
             Executor exec = Executors.newCachedThreadPool();
             server.setExecutor(exec);
             server.start();
             log("ChatServer running...");
 
-            // while-loop for handling server & DB shutdown with given command
+            // loop for handling server & DB shutdown with '/quit'-command
             boolean running = true;
             while (running) {
                 String input = System.console().readLine();
@@ -76,28 +83,27 @@ public class ChatServer {
         } catch (Exception e) {
             log("Failed to create HTTP server" + e.getMessage());
         }
-
     }
 
+    // Method for configuring the server to use TLS/HTTPS. Receives given command line
+    // args (keystore & passphrase for keystore) as parameters.
     private static SSLContext chatServerSSLContext(String[] args) throws Exception {
 
-        // SSL passphrase
         char[] passphrase = args[2].toCharArray();
         KeyStore ks = KeyStore.getInstance("JKS");
         ks.load(new FileInputStream(args[1]), passphrase);
 
         KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
         kmf.init(ks, passphrase);
-
         TrustManagerFactory tmf = TrustManagerFactory.getInstance("SunX509");
         tmf.init(ks);
-
         SSLContext ssl = SSLContext.getInstance("TLS");
         ssl.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
 
         return ssl;
     }
 
+    // Some colour choices for the output log text elements
     public static final String ANSI_RESET = "\u001B[0m";
     public static final String ANSI_BLACK = "\u001B[30m";
     public static final String ANSI_RED = "\u001B[31m";
@@ -108,9 +114,8 @@ public class ChatServer {
     public static final String ANSI_CYAN = "\u001B[36m";
     public static final String ANSI_WHITE = "\u001B[37m";
 
-    // method for printing server terminal logs
+    // Method for printing server terminal/command line output logs
     public static void log(String message) {
         System.out.println(ANSI_GREEN + LocalDateTime.now() + ANSI_RESET + " " + message);
     }
-
 }
