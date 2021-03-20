@@ -184,9 +184,11 @@ public class ChatDatabase {
             while (rs.next() && i < 100) {
                 String dbNick = rs.getString("nickname");
                 String dbMsg = rs.getString("message");
+                String dbLocation = rs.getString("location");
+                String dbTemp = rs.getString("temperature");
                 LocalDateTime dbTime = null;
 
-                ChatMessage msg = new ChatMessage(dbTime, dbNick, dbMsg);
+                ChatMessage msg = new ChatMessage(dbTime, dbNick, dbMsg, dbLocation, dbTemp);
                 
                 msg.setSent(rs.getLong("timestamp"));
                 messages.add(msg);
@@ -211,9 +213,11 @@ public class ChatDatabase {
             while (rs.next()) {
                 String dbNick = rs.getString("nickname");
                 String dbMsg = rs.getString("message");
+                String dbLocation = rs.getString("location");
+                String dbTemp = rs.getString("temperature");
                 LocalDateTime dbTime = null;
 
-                ChatMessage msg = new ChatMessage(dbTime, dbNick, dbMsg);
+                ChatMessage msg = new ChatMessage(dbTime, dbNick, dbMsg, dbLocation, dbTemp);
 
                 msg.setSent(rs.getLong("timestamp"));
                 list.add(msg);

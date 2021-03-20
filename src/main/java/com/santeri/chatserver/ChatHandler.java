@@ -142,50 +142,13 @@ public class ChatHandler implements HttpHandler {
 
                         if (chatJson.has("location")) {
                             location = chatJson.getString("location");
+                            if (!location.trim().isEmpty() && !location.equalsIgnoreCase("null")) {
+                                String[] weatherData = getWeatherData(location, temperature);
 
-                            if (!location.trim().isEmpty()) {
-                                URL url = new URL("http://opendata.fmi.fi/wfs/fin?service=WFS&version=2.0.0&request=GetFeature&storedquery_id=fmi::observations::weather::timevaluepair&place=" + location + "&parameters=temperature&");
-    
-                                HttpURLConnection urlConnection = null;
-                                InputStream inputStream = null;
-    
-                                try {
-                                    urlConnection = (HttpURLConnection) url.openConnection();
-                                    urlConnection.setReadTimeout(10000);
-                                    urlConnection.setConnectTimeout(20000);
-    
-                                    urlConnection.setRequestMethod("GET");
-                                    urlConnection.setDoOutput(true); //tarviiko?
-                                    urlConnection.setDoInput(true); //tarviiko?
-    
-                                    System.out.println(urlConnection.getResponseCode());
-                                    inputStream = urlConnection.getInputStream();
-                                    String inputDump = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8)).lines()
-                                                       .collect(Collectors.joining("\n"));
-                                    inputStream.close();
-    
-                                    Document doc = convertToXML(inputDump);
-    
-                                    NodeList weatherList = doc.getElementsByTagName("wml2:MeasurementTVP");
-                                    Node node = weatherList.item(weatherList.getLength()-1);
-                                    if (node.getNodeType() == Node.ELEMENT_NODE) {
-                                        Element elem = (Element) node;
-                                        temperature = elem.getElementsByTagName("wml2:value").item(0).getTextContent();
-    
-                                        newMessage.location = location;
-                                        newMessage.temperature = temperature;
-                                    }
-    
-                                } catch (IOException e) {
-                                    e.printStackTrace(); //change this
-                                } finally {
-                                    if (urlConnection != null) {
-                                        urlConnection.disconnect();
-                                    }
-                                    if (inputStream != null) {
-                                        inputStream.close();
-                                    }
-                                }
+                                newMessage.location = weatherData[0];
+                                newMessage.temperature = weatherData[1];
+                            } else {
+                                ChatServer.log("'location' specified in POST request but was empty");
                             }
                         }
 
@@ -261,6 +224,11 @@ public class ChatHandler implements HttpHandler {
             String dateText = toSend.format(formatter);
             jsonMessage.put("sent", dateText);
 
+            if (!message.getLocation().trim().isEmpty() && !message.getLocation().equalsIgnoreCase("null")) {
+                jsonMessage.put("location", message.getLocation());
+                jsonMessage.put("temperature", message.getTemperature());
+            }
+
             responseMessages.put(jsonMessage);
         }
         
@@ -280,6 +248,56 @@ public class ChatHandler implements HttpHandler {
         stream.close();
         
         return code;
+    }
+
+    private static String[] getWeatherData(String location, String temperature) throws Exception {
+
+        URL url = new URL("http://opendata.fmi.fi/wfs/fin?service=WFS&version=2.0.0&request=" 
+                        + "GetFeature&storedquery_id=fmi::observations::weather::timevaluepair&place=" 
+                        + location 
+                        + "&parameters=temperature&");
+
+        HttpURLConnection urlConnection = null;
+        InputStream inputStream = null;
+
+        try {
+            urlConnection = (HttpURLConnection) url.openConnection();
+            urlConnection.setReadTimeout(10000);
+            urlConnection.setConnectTimeout(20000);
+
+            urlConnection.setRequestMethod("GET");
+            urlConnection.setDoOutput(true); //tarviiko?
+            urlConnection.setDoInput(true); //tarviiko?
+
+            System.out.println(urlConnection.getResponseCode());
+            inputStream = urlConnection.getInputStream();
+            String inputDump = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8)).lines()
+                                .collect(Collectors.joining("\n"));
+            inputStream.close();
+
+            Document doc = convertToXML(inputDump);
+
+            NodeList weatherList = doc.getElementsByTagName("wml2:MeasurementTVP");
+            Node node = weatherList.item(weatherList.getLength()-1);
+            if (node.getNodeType() == Node.ELEMENT_NODE) {
+                Element elem = (Element) node;
+                temperature = elem.getElementsByTagName("wml2:value").item(0).getTextContent();
+
+                String[] weatherData = {location, temperature};
+                return weatherData;
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace(); //change this
+        } finally {
+            if (urlConnection != null) {
+                urlConnection.disconnect();
+            }
+            if (inputStream != null) {
+                inputStream.close();
+            }
+        }
+        return null;
     }
 
     private static Document convertToXML(String xmlString) throws Exception {
