@@ -1,7 +1,7 @@
 /* 
     Programming 3 Course Assignment - ChatServer.User
     Author: Santeri Kottari https://github.com/sjkottari
-    Project repository: https://github.com/sjkottari/oh3-chatserver
+    Project repository: https://github.com/sjkottari/oh3-chatserver-assignment
     Information Processing Science - University of Oulu
 */
 
