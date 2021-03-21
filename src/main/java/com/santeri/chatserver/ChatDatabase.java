@@ -191,7 +191,7 @@ public class ChatDatabase {
     // the amount of chatmessages returned to client to just 100 newest messages
     // time-wise. Regarding fmi.fi weather data, location and temperature
     // -attributes are also queried. Sent-timestamp is converted from epoch time
-    // to LocalDateTime on line 212 as required by server API.
+    // to LocalDateTime on line 211 as required by server API.
     public List<ChatMessage> getMessages() throws SQLException {
         int i = 0;
         List<ChatMessage> messages = new ArrayList<ChatMessage>();

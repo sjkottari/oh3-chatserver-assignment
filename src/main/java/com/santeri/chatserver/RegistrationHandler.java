@@ -1,5 +1,10 @@
-// Made by: Santeri Kottari
-// Based on works made by: Antti Juustila https://github.com/anttijuu
+/* 
+    Programming 3 Course Assignment - ChatServer.RegistrationHandler
+    Author: Santeri Kottari https://github.com/sjkottari
+    Project repository: https://github.com/sjkottari/oh3-chatserver
+    Based on works made by Antti Juustila https://github.com/anttijuu
+    Information Processing Science - University of Oulu
+*/
 
 package com.santeri.chatserver;
 

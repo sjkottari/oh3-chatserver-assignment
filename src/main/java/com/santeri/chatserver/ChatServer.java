@@ -58,7 +58,7 @@ public class ChatServer {
             httpcontext.setAuthenticator(auth);
             server.createContext("/registration", new RegistrationHandler(auth));
 
-            // open database with name argument
+            // Open database with name argument
             database.open(args[0]);
 
             Executor exec = Executors.newCachedThreadPool();
@@ -66,7 +66,7 @@ public class ChatServer {
             server.start();
             log("ChatServer running...");
 
-            // loop for handling server & DB shutdown with '/quit'-command
+            // Loop for handling server & DB shutdown with '/quit'-command
             boolean running = true;
             while (running) {
                 String input = System.console().readLine();

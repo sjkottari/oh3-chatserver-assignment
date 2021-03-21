@@ -1,10 +1,18 @@
+/* 
+    Programming 3 Course Assignment - ChatServer.User
+    Author: Santeri Kottari https://github.com/sjkottari
+    Project repository: https://github.com/sjkottari/oh3-chatserver
+    Information Processing Science - University of Oulu
+*/
+
 package com.santeri.chatserver;
 
+// Class for users
 public class User {
 
-    String username;
-    String password;
-    String email;
+    private String username;
+    private String password;
+    private String email;
 
     public User(final String user, final String passwd, final String emailaddr) {
         username = user;
