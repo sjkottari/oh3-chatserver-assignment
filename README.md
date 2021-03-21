@@ -1,7 +1,10 @@
-# oh3-chatserver
+# oh3-chatserver-assignment
 
-Repository for Ohjelmointi 3 exercise source files
+This repository is for Ohjelmointi 3 (811367A) Course Assignment Project source files.
 
+(Previously a repository for Ohjelmointi 3 exercise source files)
+
+Author information:
 - Full name: Santeri Juhani Kottari
 - StudentID: 2588410
 - Email: santeriko.sk@gmail.com
