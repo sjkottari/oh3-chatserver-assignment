@@ -278,26 +278,26 @@ public class ChatHandler implements HttpHandler {
             ChatServer.log("WFService responded with: " + urlConnection.getResponseCode());
 
             inputStream = urlConnection.getInputStream();
-            String inputDump = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))
+            String weatherDump = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))
                                .lines().collect(Collectors.joining("\n"));
             inputStream.close();
 
             // InputDump from the service is converted to a more
             // manageable XML format in a separate method.
-            Document doc = convertToXML(inputDump);
+            Document doc = convertToXML(weatherDump);
 
             // XML elements with given tag are get from the document
             NodeList weatherList = doc.getElementsByTagName("wml2:MeasurementTVP");
 
             // Last item from the node list is get. The last item contains
             // the most up-to-date weather data in the list.
-            Node node = weatherList.item(weatherList.getLength() - 1);
+            Node weatherItem = weatherList.item(weatherList.getLength() - 1);
 
             // New element is created from the last node. Temperature
             // value is get from the element by certain tag name in string format.
             // String[] containing user location and location temperature are returned.
-            if (node.getNodeType() == Node.ELEMENT_NODE) {
-                Element elem = (Element) node;
+            if (weatherItem.getNodeType() == Node.ELEMENT_NODE) {
+                Element elem = (Element) weatherItem;
                 temperature = elem.getElementsByTagName("wml2:value").item(0).getTextContent();
 
                 String[] weatherData = { location, temperature };
