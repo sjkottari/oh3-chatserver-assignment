@@ -9,6 +9,20 @@ This repository is for Ohjelmointi 3 (811367A) Course Assignment Project source 
 - StudentID: 2588410
 - Email: santeriko.sk@gmail.com
 
+### Advanced API
+- Feature: Attach weather information to user messages from fmi.fi -service.
+  - Curl usage with chat json-file required.
+
+Example contents:
+```json
+{
+  "user" : "nickname",
+  "message" : "contents of the message",
+  "location" : "Oulu",
+  "sent" : "2021-03-26T12:00:00.123Z"
+}
+```
+
 ### Important note:
 There is an elusive bug in the code that was discussed with @anttijuu during 5th of March. The bug relates to Crypt.crypt -function creating invalid salt values with the implementation presented in Exercise 5. The aforementioned salt value caused errors randomly during parallel unit testing, approximately 1 out of 10 times. 'Bytes & Base64 encoded' -implementation was discarded in favor of a simpler implementation. As a result, no further random errors have arosen during testing. The case was resolved as not being a fault in source code files, and the new implementation was approved by @anttijuu.
 
