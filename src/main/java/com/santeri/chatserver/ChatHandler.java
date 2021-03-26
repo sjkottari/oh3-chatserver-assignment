@@ -46,8 +46,8 @@ public class ChatHandler implements HttpHandler {
     ChatDatabase database = ChatDatabase.getInstance();
 
     // Handle-method for handling client's POST/GET request. Server's
-    // actions and responses are carried out in separate methods. If request 
-    // is not either POST or GET, we end up in error. This error is caught 
+    // actions and responses are carried out in separate methods. If request
+    // is not either POST or GET, we end up in error. This error is caught
     // along with other errors at the end of the method. In case of an error,
     // a response will be sent back to the client, informing about what went wrong.
     @Override
@@ -159,6 +159,7 @@ public class ChatHandler implements HttpHandler {
                             }
                         }
 
+                        // Chat messages are stored to database
                         database.storeMessages(newMessage);
                         exchange.sendResponseHeaders(code, -1);
                         ChatServer.log("New message saved");
@@ -209,7 +210,7 @@ public class ChatHandler implements HttpHandler {
             exchange.sendResponseHeaders(code, -1);
             return code;
         }
-        
+
         JSONArray responseMessages = new JSONArray();
 
         // Every chatmessage in the returned messageList is put into a jsonobject
@@ -281,7 +282,7 @@ public class ChatHandler implements HttpHandler {
                                .lines().collect(Collectors.joining("\n"));
             inputStream.close();
 
-            // InputDump from the service is converted to a more 
+            // InputDump from the service is converted to a more
             // manageable XML format in a separate method.
             Document doc = convertToXML(inputDump);
 

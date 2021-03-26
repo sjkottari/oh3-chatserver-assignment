@@ -26,10 +26,16 @@ import org.json.JSONObject;
 public class RegistrationHandler implements HttpHandler {
 
     ChatAuthenticator authenticator = null;
+
     RegistrationHandler(final ChatAuthenticator auth) {
         authenticator = auth;
     }
 
+    // Handle-method for handling client's POST registration request.
+    // Registering the user is carried out in ChatAuthenticator-class.
+    // Errors are caught at the end of the method. In case of an error,
+    // a response will be sent back to the client, informing about what 
+    // went wrong.
     @Override
     public void handle(HttpExchange exchange) throws IOException {
         int code = 200;
@@ -38,15 +44,14 @@ public class RegistrationHandler implements HttpHandler {
         ChatServer.log("Request being handled in thread: " + Thread.currentThread().getId());
 
         try {
-            // registration POST request handling
             if (exchange.getRequestMethod().equalsIgnoreCase("POST")) {
                 Headers headers = exchange.getRequestHeaders();
                 int contentLength = 0;
                 String contentType = "";
 
-                // getting content length and type have been refactored to resemble Antti's implementation
                 if (headers.containsKey("Content-Length")) {
                     contentLength = Integer.parseInt(headers.get("Content-Length").get(0));
+                    ChatServer.log("Content-Length: " + contentLength);
                 } else {
                     code = 411;
                 }
@@ -57,21 +62,24 @@ public class RegistrationHandler implements HttpHandler {
                     errorMessage = "There was no content type";
                 }
 
-                // check if headers do not contain type 'text/plain'
+                // Verify Content-Type to be 'application/json' as required by server API
                 if (!contentType.contains("application/json")) {
                     code = 411;
                     errorMessage = "Content type not supported. Only 'application/json'";
                     ChatServer.log(errorMessage);
                 } else {
                     InputStream is = exchange.getRequestBody();
-                    // read registration credentials from request body
                     String registrationText = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))
-                            .lines().collect(Collectors.joining("\n"));
+                                              .lines().collect(Collectors.joining("\n"));
                     is.close();
 
+                    // Check registration request body message is not empty. A JSON object
+                    // containing the body is also created. It is used for getting relevant
+                    // registration message values that are put into newUser-object. It is
+                    // used in turn to initialize user registration in another class. Result
+                    // will be that a new user is added to the database.
                     if (registrationText != null && !registrationText.trim().isEmpty()) {
                         JSONObject regisJson = new JSONObject(registrationText);
-
                         String username = regisJson.getString("username");
                         String password = regisJson.getString("password");
                         String email = regisJson.getString("email");
@@ -79,6 +87,8 @@ public class RegistrationHandler implements HttpHandler {
                         if (!username.trim().isEmpty() && !password.trim().isEmpty() && !email.trim().isEmpty()) {
                             User newUser = new User(username, password, email);
 
+                            // addUser-method in separate class returns true if 
+                            // adding a user to database is successful.
                             if (authenticator.addUser(username, newUser)) {
                                 exchange.sendResponseHeaders(code, -1);
                                 ChatServer.log("Added as user: " + username);
@@ -97,15 +107,11 @@ public class RegistrationHandler implements HttpHandler {
                         ChatServer.log(errorMessage);
                     }
                 }
-            }
-            // if request isn't POST, we end up in a client side error
-            else {
+            } else {
                 code = 400;
                 errorMessage = "ERROR: Feature not supported. Only POST!";
             }
-        }
-        // if handling the request fails, we end up in a server side error
-        catch (IOException e) {
+        } catch (IOException e) {
             code = 500;
             errorMessage = "Error while handling the request. " + e.getMessage();
         } catch (JSONException e) {
@@ -116,13 +122,11 @@ public class RegistrationHandler implements HttpHandler {
             errorMessage = "ERROR: Internal server error. " + e.getMessage();
             e.printStackTrace();
         }
-        // Any error encountered previously is caught here
+
         if (code < 200 || code > 299) {
-            // log-method prints code and response to server terminal
             ChatServer.log("ERROR: In /registration: " + code + " " + errorMessage);
             byte[] bytes = errorMessage.getBytes("UTF-8");
             exchange.sendResponseHeaders(code, bytes.length);
-            // response body bytes must be written to the stream
             OutputStream stream = exchange.getResponseBody();
             stream.write(bytes);
             stream.close();
