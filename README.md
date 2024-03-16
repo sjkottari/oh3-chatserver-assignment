@@ -2,12 +2,10 @@
 
 This repository is for Ohjelmointi 3 (811367A) Course Assignment Project source files.
 
-(Previously a repository for Ohjelmointi 3 exercise source files)
-
 ### Author information:
 - Full name: Santeri Juhani Kottari
-- StudentID: 2588410
-- Email: santeriko.sk@gmail.com
+- StudentID: Y52934672
+- Email: kosaju99@gmail.com / skottari19@student.oulu.fi
 
 ### Advanced API
 - Feature: Attach weather information to user messages from fmi.fi -service.
